@@ -17,7 +17,7 @@ void fixed_len_write(Record *record, void *buf)
     {
         int position = i * attribute_size;
         // since record length is fixed,
-        // we can use attribute_len for all
+        // we can use attribute_size for all
         memcpy(((char *)buf + position), record->at(i), attribute_size);
     }
 }

@@ -21,8 +21,6 @@ const int num_attributes = 100;
 
 const int attribute_size = 10;
 
-#define record_size num_attributes *attribute_len
-
 /**
  * Compute the number of bytes required to serialize record
  */

@@ -3,41 +3,36 @@
 #include <string.h>
 #include "library.h"
 
-void append(char *s, char c)
-{
-    int len = strlen(s);
-    s[len] = c;
-    s[len + 1] = '\0';
-}
-
 int main()
 {
-    char c;
-    int r;
+    char character;
+    int random;
 
-    // Construct a reandom record
+    // Construct records for testing
     Record record;
     for (int i = 0; i < 100; i++)
     {
-        char *attr = (char *)malloc(attribute_size + 1);
-        attr[0] = '\0';
+        char *attribute = (char *)malloc(attribute_size + 1);
+        attribute[0] = '\0';
         for (int j = 0; j < 10; j++)
         {
-            r = rand() % 26;
-            c = 'a' + r;
-            append(attr, c);
+            random = rand() % 26;
+            character = 'a' + random;
+            int size = strlen(attribute);
+            attribute[size] = character;
+            attribute[size + 1] = '\0';
         }
-        record.push_back(attr);
+        record.push_back(attribute);
     }
 
     int size = fixed_len_sizeof(&record);
     printf("fixed_len_sizeof(record) returned %d, expected 100*10=1000\n", size);
 
-    // void *buf = malloc(size);
+    void *buf = malloc(size);
 
-    // fixed_len_write(&record, buf);
-    // Record record2;
-    // fixed_len_read(buf, size, &record2);
-    // printf("%s, %s\n", record[0], record2[0]);
-    // printf("%s, %s\n", record[99], record2[99]);
+    fixed_len_write(&record, buf);
+    Record record2;
+    fixed_len_read(buf, size, &record2);
+    printf("Record in buf: %s, Record deserialized and written in record: %s\n", record[0], record2[0]);
+    printf("Record in buf: %s, Record deserialized and written in record: %s\n", record[87], record2[87]);
 }
