@@ -1,5 +1,6 @@
 import sys
 import random
+import csv
 
 letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 try:
@@ -11,9 +12,12 @@ except:
 
 with open(filename, 'w') as f:
     for _ in range(n):
+        wr = csv.writer(f)
         row = []
         for a in range(100):
             row.append(''.join([random.choice(letters) for j in range(10)]))
-        print(f, ",".join(row))
+        row = [','.join(row)]
+        print(row)
+        wr.writerow(row)
 
 print("Generated %d random tuples in %s." % (n, filename))      
