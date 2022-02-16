@@ -29,9 +29,26 @@ int main()
     printf("fixed_len_sizeof(record) returned %d, expected 100*10=1000\n", size);
 
     void *buf = malloc(size);
+    Page page;
+    
+    init_fixed_len_page(&page, 10000, size);
+    
+    printf("page capacity: %d\n", fixed_len_page_capacity(&page));
+
+
+    printf("%d\n", add_fixed_len_page(&page, &record));
+    printf("page free slots: %d\n", fixed_len_page_freeslots(&page));
+
+    Record record2;
+    //printf("%s\n", ((char *)page.data)[0]);
+    printf("%d\n", add_fixed_len_page(&page, &record));
+    printf("page free slots: %d\n", fixed_len_page_freeslots(&page));
+
+    read_fixed_len_page(&page, 0, &record);
+
 
     fixed_len_write(&record, buf);
-    Record record2;
+    
     fixed_len_read(buf, size, &record2);
     printf("Record in buf: %s, Record deserialized and written in record: %s\n", record[0], record2[0]);
     printf("Record in buf: %s, Record deserialized and written in record: %s\n", record[87], record2[87]);
