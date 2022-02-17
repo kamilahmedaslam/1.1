@@ -2,81 +2,85 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
-#include <strings.h>
-#include <stdio.h>
 #include <sys/timeb.h>
 #include "library.h"
-#include <time.h>
-#include <sstream>
 
-
-int main (int argc, char** argv) {
-    if (argc < 3 || argc > 4) {
-        std::cout << "Usage: read_fixed_len_pages <page_file> <page_size>\n";
+int main(int argc, char** argv) {
+    if (argc < 3) {
+        std::cout << "Error, usage must be:\n";
+        std::cout << "./read_fixed_len_page <page_file> <page_size>\n";
         return 1;
     }
 
-    // initialize variables from parameters
-    std::string page_filename(argv[1]);
-    int page_size = std::stoi(argv[2]);
+    // page_size taken from argument
+    int page_size = atoi(argv[2]);
+    int recordSize = num_attributes * attribute_size;
+    // printf("%d\n", recordSize);
 
-    std::ifstream pageFile;
-    pageFile.open(page_filename, std::ios::in | std::ios::binary);
+    std::ifstream page_file;
+    page_file.open(argv[1]);
+    
 
-    // start timer
+
+    if (!page_file)
+    {
+        std::cout << "Incorrect file" << argv[1] << "\n";
+        return 1;
+        //printf("no file")
+    }
+
+    Page page;
+    char page_copy[page_size];
+
+    int numRecords = 0;
+    int numPages = 0;
+
     struct timeb t;
     ftime(&t);
     unsigned long start_ms = t.time * 1000 + t.millitm;
-
-    FILE *null = fopen("tuples.csv", "w");
     
-    // 10*100
-    int record_size = 1000;
-    int numPages = 0;
-    int numRecords = 0;
 
-    // run until we hit end of file
-    while (!pageFile.eof()) {
-        Page page;
+    
+    // copying characters to page_copy array from page_file until page_size is reached 
+    while (page_file.read(page_copy, page_size)) {
 
-        init_fixed_len_page(&page, page_size, record_size);
-        pageFile.read((char *)page.data, page_size);
+        // initialzing the page
+        init_fixed_len_page(&page, page_size, recordSize);
 
-        int capacity = fixed_len_page_capacity(&page);
-        
-        for (int i = 0; i < capacity; i++) {
-            Record record;
-            
-            read_fixed_len_page(&page, i, &record);
+        for (int i = 0; i < fixed_len_page_capacity(&page); ++i) {
+            Record *record = new Record;
 
-            for (unsigned int j = 0; j < num_attributes; j++) {
-                
-                if (j < num_attributes-1) {
-                    std::cout << record.at(j);
-                    std::cout << ",";
-                }
-                else {
-                    std::cout << record.at(j);
+            int offset = i*recordSize;
+            fixed_len_read(page_copy + offset, recordSize, record);
+
+            write_fixed_len_page(&page, i, record);
+
+            for (Record::iterator header = record->begin(); header!=record->end(); ++header) {
+                if (header == record->end() - 1) {
+                        std::cout << *header;
+                } else {
+                        std::cout << *header << ",";
                 }
             }
-            
-            fputs("\n", null);
+            std::cout << "\n";
             numRecords++;
         }
-        numPages++;
+        std::cout << "\n";
+        std::cout << "\n";
     }
+    
 
-    fclose(null);
-    pageFile.close();
-
+    numPages = (numRecords*(num_attributes*attribute_size))/page_size;
+    
     ftime(&t);
     unsigned long stop_ms = t.time * 1000 + t.millitm;
+    
 
+    page_file.close();
 
+    std::cout << "NUMBER OF PAGES: " << numPages << "\n";
     std::cout << "NUMBER OF RECORDS: " << numRecords << "\n";
-    std::cout << "NUMBER OF PAGES: " << numPages - 1 << "\n";
     std::cout << "TIME: " << stop_ms - start_ms << " milliseconds\n";
-
+    
     return 0;
-
 }

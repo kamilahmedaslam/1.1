@@ -44,25 +44,21 @@ int main(int argc, const char * argv[]) {
             char *read = (char *)malloc(attribute_size + 1);
             std::strncpy(read, attr.c_str(), attribute_size + 1);
             record.push_back(read); 
+            //printf("%s\n", read);
         }
         
         // for the first iteration, we have to initialize the page to be written into
 
-        if (numPages == 0) {
+        if (new_page) {
             init_fixed_len_page(&page, page_size, fixed_len_sizeof(&record));
             numPages++;
         }
     
-
-        int r_val = add_fixed_len_page(&page, &record);
+        new_page = add_fixed_len_page(&page, &record) == -1;
         numRecords++;
 
-        if (r_val < 0) {
-            new_page = 1;
-        }
-
         if (new_page) {
-            pageFile.write((const char*)page.data, page.page_size);
+            pageFile.write((const char*) page.data, page.page_size);
             init_fixed_len_page(&page, page_size, fixed_len_sizeof(&record));
             add_fixed_len_page(&page, &record);
             numPages++;
@@ -82,7 +78,7 @@ int main(int argc, const char * argv[]) {
     unsigned long stop_ms = t.time * 1000 + t.millitm;
 
     std::cout << "NUMBER OF RECORDS: " << numRecords << "\n";
-    std::cout << "NUMBER OF PAGES: " << numPages - 1 << "\n";
+    std::cout << "NUMBER OF PAGES: " << numPages << "\n";
     std::cout << "TIME: " << stop_ms - start_ms << " milliseconds\n";
 
     return 0;
