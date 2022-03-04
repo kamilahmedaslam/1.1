@@ -116,3 +116,142 @@ void read_fixed_len_page(Page *page, int slot, Record *r) {
     fixed_len_read(curr_slot, record_size, r);
     printf("%s\n", curr_slot);
 }
+
+
+void init_heapfile(Heapfile *heapfile, int page_size, FILE *file){
+    heapfile->file_ptr = file;
+    heapfile->page_size = page_size;
+}
+
+/**
+ * Allocate another page in the heapfile.  This grows the file by a page.
+ */
+PageID alloc_page(Heapfile *heapfile){
+    fseek(heapfile->file_ptr, 0, SEEK_SET);
+    bool foundPage = true;
+    int offset = 0;
+    int last_id = 0;
+    
+    while(foundPage){
+        fseek(heapfile->file_ptr, last_id * (heapfile->page_size), SEEK_SET);
+        fread(&offset, sizeof(int), 1, heapfile->file_ptr);
+        //if equal to one another, we know we've found the last page
+        if(offset == last_id){
+            foundPage = false;
+        }
+        else{
+            last_id = offset;
+        }
+    }
+    
+    // BE CAREFUL ABOUT RESETTING THE POINTERS WHERE YOU NEED TO BE RESET
+    
+    //CHECK THIS
+//    fseek(heapfile->file_ptr,0,SEEK_CUR);
+    int last_page=offset;
+//    fseek(heapfile->file_ptr, last_id * (heapfile->page_size),SEEK_SET);
+    
+    
+
+    int new_page = last_page+1;
+    fwrite(&new_page, sizeof(int), 1, heapfile->file_ptr);
+
+    fseek(heapfile->file_ptr,(last_page+1)*heapfile->page_size,SEEK_SET);
+    
+    for (int i = 0; i <heapfile->page_size/8; ++i) {
+        int offset = i+last_page+1;
+        fwrite(&offset, sizeof(int), 1, heapfile->file_ptr);
+        fwrite(&heapfile->page_size, sizeof(int), 1, heapfile->file_ptr);
+    }
+    
+    return last_page+2;
+    
+}
+
+/**
+ * Read a page into memory
+ */
+void read_page(Heapfile *heapfile, PageID pid, Page *page){
+    fseek(heapfile->file_ptr, pid* (heapfile->page_size) , SEEK_SET);
+    fread(page->data, heapfile->page_size, 1, heapfile->file_ptr);
+    fseek(heapfile->file_ptr, 0, SEEK_SET);
+
+}
+
+/**
+ * Write a page from memory to disk
+ */
+void write_page(Page *page, Heapfile *heapfile, PageID pid){
+    fseek(heapfile->file_ptr, pid * heapfile->page_size, SEEK_SET);
+    fwrite(page->data, page->page_size, 1, heapfile->file_ptr);
+    
+    //any unwritten data in its output buffer is written to the file. But do we need this?
+    fflush(heapfile->file_ptr);
+    fseek(heapfile->file_ptr, 0, SEEK_SET);
+
+}
+
+
+RecordIterator::RecordIterator(Heapfile *heapfile){
+
+    //initializing and allocating memory for heapfile
+    this->heapfile = (Heapfile *) malloc(sizeof(Heapfile));
+    this->heapfile = heapfile;
+
+    //initializing records and pages
+    this->rid->page_id = 0;
+    this->rid->slot = 0;
+    this->curPage = (Page *) malloc(sizeof(heapfile->page_size));
+    this->rid = (RecordID*) malloc(sizeof(RecordID));
+
+    //read an empty page into memory
+    read_page(heapfile, 0, this->curPage);
+}
+
+Record RecordIterator::next() {
+    Record record;
+    int capacity = fixed_len_page_capacity(this->curPage);
+    int currSlot = this->rid->slot;
+
+    if (currSlot >= capacity) {
+        this->rid->slot = 0;
+        this->rid->page_id += 1;
+        read_page(this->heapfile, this->rid->page_id, this->curPage);
+        return next();
+    }
+
+    else {
+        read_fixed_len_page(this->curPage, this->rid->slot, &record);
+        this->rid->slot += 1;
+        return record;
+    }
+
+}
+
+bool RecordIterator::hasNext() {
+    Record record;
+    int capacity = fixed_len_page_capacity(this->curPage);
+    int currSlot = this->rid->slot;
+    bool exists = false;
+    //checking if slot is on the page
+    // if not we check a different page with the record id
+    if (currSlot >= capacity) {
+        Page *page = (Page *) malloc(this->heapfile->page_size);
+        read_page(this->heapfile, (this->rid->page_id + 1), page);
+        read_fixed_len_page(page, currSlot, &record);
+        free(page);
+        if (record.empty()) {
+            return exists;
+        }
+    }
+
+    else {
+        read_fixed_len_page(this->curPage, this->rid->slot, &record);
+        if (record.empty()) {
+            return exists;
+        }
+    }   
+
+    exists = true;
+    return exists;
+}
