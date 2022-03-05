@@ -119,6 +119,14 @@ void read_fixed_len_page(Page *page, int slot, Record *r) {
 
 
 void init_heapfile(Heapfile *heapfile, int page_size, FILE *file){
+
+    // divide by 8 for the page offset
+    for (int i = 0; i < page_size/8; i++){
+        int off = i;
+        fwrite(&off, sizeof(int), 1, file);
+        fwrite(&page_size, sizeof(int), 1, file);
+    }
+
     heapfile->file_ptr = file;
     heapfile->page_size = page_size;
 }
@@ -172,10 +180,9 @@ PageID alloc_page(Heapfile *heapfile){
  * Read a page into memory
  */
 void read_page(Heapfile *heapfile, PageID pid, Page *page){
-    fseek(heapfile->file_ptr, pid* (heapfile->page_size) , SEEK_SET);
-    fread(page->data, heapfile->page_size, 1, heapfile->file_ptr);
-    fseek(heapfile->file_ptr, 0, SEEK_SET);
-
+    init_fixed_len_page(page, heapfile->page_size, num_attributes * attribute_size);
+    fseek(heapfile->file_ptr, pid * (heapfile->page_size), SEEK_SET);
+    fread(page->data, heapfile->page_size , 1, heapfile->file_ptr); 
 }
 
 /**
