@@ -191,11 +191,42 @@ void read_page(Heapfile *heapfile, PageID pid, Page *page){
 void write_page(Page *page, Heapfile *heapfile, PageID pid){
     fseek(heapfile->file_ptr, pid * heapfile->page_size, SEEK_SET);
     fwrite(page->data, page->page_size, 1, heapfile->file_ptr);
+
+    int offset = 0;
+    int pages_left = pid;
+    int free;
+    // to compare offset and pageid
+    bool notEqual = true;
+
+    int size = page->page_size/8 - 1;
+
+    while(pages_left > size) {
+        int finaloff = offset*page->page_size;
+        fseek(heapfile->file_ptr, finaloff, SEEK_SET);
+        fread(&offset, sizeof(int), 1, heapfile->file_ptr);
+
+        pages_left -= size + 1;
+    }
+    int finaloff = offset*page->page_size;
+    fseek(heapfile->file_ptr, finaloff, SEEK_SET);
+
+    while(notEqual) {
+        fread(&offset, sizeof(int), 1, heapfile->file_ptr);
+        
+        if (offset == pid) {
+            notEqual = false;
+        }
+
+        fread(&free, sizeof(int), 1, heapfile->file_ptr);
+    }
+
+    fseek(heapfile->file_ptr, 0, SEEK_CUR);
+    free = num_attributes * attribute_size * fixed_len_page_freeslots(page);
+    fwrite(&free, sizeof(int), 1, heapfile->file_ptr);
     
     //any unwritten data in its output buffer is written to the file. But do we need this?
-    fflush(heapfile->file_ptr);
-    fseek(heapfile->file_ptr, 0, SEEK_SET);
-
+    //fflush(heapfile->file_ptr);
+    
 }
 
 
