@@ -172,10 +172,10 @@ PageID alloc_page(Heapfile *heapfile){
  * Read a page into memory
  */
 void read_page(Heapfile *heapfile, PageID pid, Page *page){
-    fseek(heapfile->file_ptr, pid* (heapfile->page_size) , SEEK_SET);
-    fread(page->data, heapfile->page_size, 1, heapfile->file_ptr);
-    fseek(heapfile->file_ptr, 0, SEEK_SET);
+    init_fixed_len_page(page,heapfile->page_size, attribute_size * num_attributes);
 
+    fseek(heapfile->file_ptr, pid * (heapfile->page_size), SEEK_SET);
+	fread(page->data, heapfile->page_size, 1, heapfile->file_ptr);
 }
 
 /**
