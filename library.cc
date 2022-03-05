@@ -119,6 +119,14 @@ void read_fixed_len_page(Page *page, int slot, Record *r) {
 
 
 void init_heapfile(Heapfile *heapfile, int page_size, FILE *file){
+
+    // divide by 8 for the page offset
+    for (int i = 0; i < page_size/8; i++){
+        int off = i;
+        fwrite(&off, sizeof(int), 1, file);
+        fwrite(&page_size, sizeof(int), 1, file);
+    }
+
     heapfile->file_ptr = file;
     heapfile->page_size = page_size;
 }
