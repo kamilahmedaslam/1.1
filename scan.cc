@@ -7,6 +7,7 @@
 
 int main(int argc, char* argv[])
 {
+    //make sure to change this to r we don't need to write to this file
     FILE *given = fopen(argv[1], "r");
     int p_size = atoi(argv[2]);
 
