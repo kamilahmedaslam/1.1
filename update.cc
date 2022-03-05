@@ -5,93 +5,6 @@
 #include <time.h>
 #include <sys/timeb.h>
 #include <stdlib.h>
-
-// Insert all records in the CSV file to a heap file
-
-int main(int argc, char **argv){
-	if (argc!=6){
-		printf("Usage: ./update <heapfile> <record_id> <attribute_id> <new_value> <page_size>\n");
-		exit(1);
-	}
-	int page_size = atoi(argv[5]),record_size = 1000,rid = atoi(argv[2]),aid = atoi(argv[3]),slotid,finalpid,freespace;
-	FILE *open_heap_file = fopen(argv[1], "rb+");
-    Page *page = (Page *)malloc(sizeof(Page));
-    page->data = (char *)malloc(page_size);
-    init_fixed_len_page(page, page_size, record_size);
-	struct timeb t;
-    long now_in_ms1,now_in_ms2,total_time = 0;
-    Heapfile *heap_file = (Heapfile *)malloc(sizeof(Heapfile));
-    heap_file->page_size = page_size;
-    heap_file->file_ptr = open_heap_file;
-    int numberofentry = page_size/8-1,numofrecord = page_size/1000;
-    // int slotid = (rid+1)%numofrecord-1;
-    // if (slotid==-1) slotid = numofrecord-1;
-    // int pid = (rid)/numofrecord;
-    // int finalpid =pid + (pid)/numberofentry+1;
-
-    int curdir=0,nextdir,rleft = rid,notfind=1;
-    while(notfind){
-        fread(&nextdir,sizeof(int),1,heap_file->file_ptr);
-        fread(&freespace,sizeof(int),1,heap_file->file_ptr);
-        int iter = 0;
-        // printf("nextdir%d\n", nextdir);
-        while(iter<numberofentry and notfind){
-            iter+=1;
-            // printf("%d\n", finalpid);
-            fread(&finalpid,sizeof(int),1,heap_file->file_ptr);
-            fread(&freespace,sizeof(int),1,heap_file->file_ptr);
-            int recordnum = (page_size-freespace)/1000;
-            if (rleft<recordnum){
-                notfind = 0;
-            }
-            else rleft-=recordnum;
-            // printf("%d  %d\n", finalpid,rleft);
-        }
-        fseek(heap_file->file_ptr,nextdir*page_size,SEEK_SET);
-    }
-    read_page(heap_file, finalpid, page);
-    // printf("%d. %d\n", finalpid,rleft);
-    
-    for (int i=0;i<fixed_len_page_capacity(page);i++){
-        Record record;
-        read_fixed_len_page(page,i,&record);
-        if (record.size()>0 && record[0][0]!='0'){
-            if(rleft==0){
-                for (int j=0;j<record.size();j++){
-                    //printf("%s", record[j]);
-                    // memset((char *)record[j],'0',10);
-                    if (j==record.size()-1)printf("\n");
-                    else printf(",");
-                }
-                memset((char *)record[aid],'0',10);
-                // printf("%s\n", argv[4]);
-                strncpy((char *)record[aid],argv[4],10);
-                printf("record: %s\n", record[aid]);
-                write_fixed_len_page(page,i,&record);
-                write_page(page,heap_file,finalpid);
-                return 0;
-            }else rleft-=1;
-        }
-    }
-
- //    read_page(heap_file, finalpid, page);
- //    Record record;
- //    read_fixed_len_page(page,slotid,&record);
- //    memset((char *)record[aid],'0',10);
- //    strncpy((char *)record[aid],argv[4],10);
-	// write_fixed_len_page(page,slotid,&record);
-	// write_page(page,heap_file,finalpid);
-    return 0;
-}
-
-
-/*#include "library.h"
-#include <stdio.h>
-#include <string.h>
-#include <strings.h>
-#include <time.h>
-#include <sys/timeb.h>
-#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -106,17 +19,19 @@ int main(int argc, char** argv) {
     int record_id = atoi(argv[2]);
     int attribute_id = atoi(argv[3]);
     int page_size = atoi(argv[5]);
+    std::string new_value(argv[4]);
 
     FILE *heapfile = fopen(argv[1], "rb+");
-
+    Page *page = (Page *)malloc(sizeof(Page));
+    page->data = (char *)malloc(page_size);
+    Heapfile *heap = (Heapfile *)malloc(sizeof(Heapfile));
+    heap->page_size = page_size;
+    heap->file_ptr = heapfile;
+    
     if (!heapfile) {
         std::cout << "Could not find file " << argv[1] << "\n";
         return 1;
     }
-
-    Heapfile *heap = new Heapfile();
-    heap->page_size = page_size;
-    heap->file_ptr = heapfile;
 
     int entry = page_size/8-1;
     //each record is of size 1000 so num of records will be as such
@@ -134,8 +49,47 @@ int main(int argc, char** argv) {
         fread(&nxtDirectory, sizeof(int), 1, heap->file_ptr);
         fread(&free, sizeof(int), 1, heap->file_ptr);
         
-    }
+        while(line < entry) {
+            while(exists) {
+                line++;
+                fread(&finalpage, sizeof(int), 1, heap->file_ptr);
+                fread(&free, sizeof(int), 1, heap->file_ptr);
+                int rec_size = page_size/(num_attributes * attribute_size);
+                int rec_free = free/(num_attributes * attribute_size);
+                int rec_num = rec_size - rec_free;
 
+                if (recLeft >= rec_num) {
+                    recLeft -= rec_num;
+                }
+                else {
+                    exists = false;
+                }
+            }
+        }
+        fseek(heap->file_ptr, nxtDirectory*page_size, SEEK_SET);
+    }
+    read_page(heap, finalpage, page);
+
+    int capacity = fixed_len_page_capacity(page);
+
+    for (int i = 0; i < capacity; i++) {
+        Record record;
+        read_fixed_len_page(page, i, &record);
+
+        if (record.size() > 0) {
+
+            if (recLeft == 0) {
+                memset((char *)record[attribute_id],'0',10);
+                strncpy((char *)record[attribute_id], argv[4], 10);
+                write_fixed_len_page(page, i, &record);
+                write_page(page, heap, finalpage);
+                return 0;
+            }
+            else {
+                recLeft-=1;
+            }
+        }
+    }
+    return 0;
 }
 
-*/
