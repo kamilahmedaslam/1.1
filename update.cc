@@ -49,8 +49,7 @@ int main(int argc, char** argv) {
         fread(&nxtDirectory, sizeof(int), 1, heap->file_ptr);
         fread(&free, sizeof(int), 1, heap->file_ptr);
         
-        while(line < entry) {
-            while(exists) {
+        while(line < entry and exists) {
                 line++;
                 fread(&finalpage, sizeof(int), 1, heap->file_ptr);
                 fread(&free, sizeof(int), 1, heap->file_ptr);
@@ -64,7 +63,6 @@ int main(int argc, char** argv) {
                 else {
                     exists = false;
                 }
-            }
         }
         fseek(heap->file_ptr, nxtDirectory*page_size, SEEK_SET);
     }
@@ -77,7 +75,6 @@ int main(int argc, char** argv) {
         read_fixed_len_page(page, i, &record);
 
         if (record.size() > 0) {
-
             if (recLeft == 0) {
                 memset((char *)record[attribute_id],'0',10);
                 strncpy((char *)record[attribute_id], argv[4], 10);

@@ -52,8 +52,7 @@ int main(int argc, char** argv) {
         fread(&nxtDirectory, sizeof(int), 1, heap->file_ptr);
         fread(&free, sizeof(int), 1, heap->file_ptr);
         
-        while(line < entry) {
-            while(exists) {
+        while(line < entry and exists) {
                 line++;
                 fread(&finalpage, sizeof(int), 1, heap->file_ptr);
                 fread(&free, sizeof(int), 1, heap->file_ptr);
@@ -70,7 +69,6 @@ int main(int argc, char** argv) {
                     moreFree = free + 1000;
                     fwrite(&moreFree, sizeof(int), 1, heap->file_ptr);
                 }
-            }
         }
         fseek(heap->file_ptr, nxtDirectory*page_size, SEEK_SET);
     }
@@ -87,7 +85,7 @@ int main(int argc, char** argv) {
                 for (int j = 0; j < record.size(); j++) {
                     memset((char *)record[j],'0',10);
                 }
-                
+
                 write_fixed_len_page(page, i, &record);
                 write_page(page, heap, finalpage);
                 return 0;
