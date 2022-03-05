@@ -199,11 +199,12 @@ RecordIterator::RecordIterator(Heapfile *heapfile){
     this->heapfile = heapfile;
 
     //initializing records and pages
+    this->rid = (RecordID*) malloc(sizeof(RecordID));
+
     this->rid->page_id = 0;
     this->rid->slot = 0;
     this->curPage = (Page *) malloc(sizeof(heapfile->page_size));
-    this->rid = (RecordID*) malloc(sizeof(RecordID));
-
+    
     //read an empty page into memory
     read_page(heapfile, 0, this->curPage);
 }
